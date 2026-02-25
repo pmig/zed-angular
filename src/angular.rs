@@ -55,20 +55,31 @@ impl AngularExtension {
         let server_exists = self.file_exists_at_path(&SERVER_PATH);
 
         if self.did_find_server && server_exists {
-            zed::set_language_server_installation_status(
-                language_server_id,
-                &zed::LanguageServerInstallationStatus::CheckingForUpdate,
-            );
-
-            // TODO only install new version if there are change
+            return Ok(SERVER_PATH.to_string());
         }
 
         zed::set_language_server_installation_status(
             language_server_id,
-            &zed::LanguageServerInstallationStatus::Downloading,
+            &zed::LanguageServerInstallationStatus::CheckingForUpdate,
         );
 
-        self.install_packages()?;
+        let installed_version =
+            zed::npm_package_installed_version(ANGULAR_LANGUAGE_SERVER_PACKAGE_NAME)?;
+        let should_install = !server_exists
+            || installed_version.as_ref() != Some(&self.angular_language_server_version);
+
+        if should_install {
+            zed::set_language_server_installation_status(
+                language_server_id,
+                &zed::LanguageServerInstallationStatus::Downloading,
+            );
+
+            if let Err(error) = self.install_packages() {
+                if !self.file_exists_at_path(&SERVER_PATH) {
+                    return Err(error);
+                }
+            }
+        }
 
         if !self.file_exists_at_path(&SERVER_PATH) {
             return Err(format!(
@@ -203,7 +214,6 @@ impl zed::Extension for AngularExtension {
         _language_server_id: &zed::LanguageServerId,
         completion: Completion,
     ) -> Option<zed::CodeLabel> {
-        println!("Label for completion {:?}", completion.kind);
         let highlight_name = match completion.kind? {
             CompletionKind::Class | CompletionKind::Interface => "type",
             CompletionKind::Constructor => "constructor",
@@ -212,6 +222,7 @@ impl zed::Extension for AngularExtension {
             CompletionKind::Property | CompletionKind::Field => "property",
             CompletionKind::Variable => "variable",
             CompletionKind::Keyword => "keyword",
+            CompletionKind::Value => "tag",
             CompletionKind::Enum => "enum",
             CompletionKind::Module => "module",
             _ => return None,
