@@ -1,0 +1,11 @@
+[tools]
+rust = "stable"
+node = "lts"
+
+[tasks.build]
+description = "Build the extension for wasm32-wasip1"
+run = "cargo build --release --target wasm32-wasip1"
+
+[tasks.check]
+description = "Run format and build checks"
+run = "cargo fmt -- --check && cargo build --verbose"
