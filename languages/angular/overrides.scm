@@ -1,2 +1,5 @@
 (comment) @comment
-(quoted_attribute_value) @string
+[
+  (attribute_value)
+  (quoted_attribute_value)
+] @string
